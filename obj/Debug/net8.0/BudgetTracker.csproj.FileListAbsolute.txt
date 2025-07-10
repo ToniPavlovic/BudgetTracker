@@ -1,0 +1,14 @@
+/home/toni/RiderProjects/BudgetTracker/bin/Debug/net8.0/BudgetTracker
+/home/toni/RiderProjects/BudgetTracker/bin/Debug/net8.0/BudgetTracker.deps.json
+/home/toni/RiderProjects/BudgetTracker/bin/Debug/net8.0/BudgetTracker.runtimeconfig.json
+/home/toni/RiderProjects/BudgetTracker/bin/Debug/net8.0/BudgetTracker.dll
+/home/toni/RiderProjects/BudgetTracker/bin/Debug/net8.0/BudgetTracker.pdb
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.GeneratedMSBuildEditorConfig.editorconfig
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.AssemblyInfoInputs.cache
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.AssemblyInfo.cs
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.csproj.CoreCompileInputs.cache
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.dll
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/refint/BudgetTracker.dll
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.pdb
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.genruntimeconfig.cache
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/ref/BudgetTracker.dll

@@ -1,0 +1,14 @@
+[
+  {
+    "Date": "2025-07-10T21:53:54.0134107+02:00",
+    "Description": "Pay for August",
+    "Category": "Salary",
+    "Amount": 3000
+  },
+  {
+    "Date": "2025-07-10T21:54:05.0796591+02:00",
+    "Description": "Food",
+    "Category": "Food",
+    "Amount": -400
+  }
+]
