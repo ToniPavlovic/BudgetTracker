@@ -12,3 +12,4 @@
 /home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.pdb
 /home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.genruntimeconfig.cache
 /home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/ref/BudgetTracker.dll
+/home/toni/RiderProjects/BudgetTracker/obj/Debug/net8.0/BudgetTracker.sourcelink.json

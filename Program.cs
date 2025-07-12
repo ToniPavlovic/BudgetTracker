@@ -17,7 +17,8 @@ class Program
             Console.WriteLine("2. Add Expense");
             Console.WriteLine("3. View Balance");
             Console.WriteLine("4. View Transaction History");
-            Console.WriteLine("5. Save & Exit");
+            Console.WriteLine("5. Show Category Summary");
+            Console.WriteLine("6. Save & Exit");
 
             Console.Write("Choose: ");
             string? choice = Console.ReadLine();
@@ -28,7 +29,8 @@ class Program
                 case "2": AddTransaction(false); break;
                 case "3": ShowBalance(); break;
                 case "4": ShowHistory(); break;
-                case "5": 
+                case "5": ShowCategorySummary(_transactions); break;
+                case "6": 
                     SaveToFile();
                     Console.WriteLine("Your data has been saved. Goodbye!");
                     return;
@@ -108,5 +110,29 @@ class Program
         { 
             Console.WriteLine("Invalid amount");
         }
+    }
+
+    static void ShowCategorySummary(List<Transaction> transactions)
+    {
+        if (transactions.Count == 0)
+        {
+            Console.WriteLine("No transactions found.");
+            return;
+        }
+
+        Console.WriteLine("\n--- Category Summary ---");
+
+        var summary = transactions
+            .GroupBy(transaction => transaction.Category)
+            .Select(g => new { Category = g.Key, Total = g.Sum(transaction => transaction.Amount) })
+            .OrderByDescending(s => Math.Abs(s.Total));
+
+        foreach (var item in summary)
+        {
+            string sign = item.Total >= 0 ? "+" : "-";
+            Console.WriteLine($"{item.Category?.PadRight(10)} | {sign}${Math.Abs(item.Total):0.00}");
+        }
+
+        Console.WriteLine();
     }
 }
