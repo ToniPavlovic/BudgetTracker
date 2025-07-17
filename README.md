@@ -15,3 +15,4 @@ All data is stored locally in a JSON file.
 - Show summary by category
 - Show monthly report
 - Data saved in `budget.json`
+- Get warnings when category limits are exceeded using `limits.json`
