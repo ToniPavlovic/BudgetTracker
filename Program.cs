@@ -6,9 +6,23 @@ class Program
 {
     static List<Transaction> _transactions = new();
     private static readonly string FilePath = "budget.json";
+    
+    static List<BudgetLimit> _limits = new()
+    {
+        new BudgetLimit { Category = "Groceries", Limit = 400 },
+        new BudgetLimit { Category = "Rent", Limit = 900 },
+        new BudgetLimit { Category = "Entertainment", Limit = 100 }
+    };
     static void Main()
     {
         LoadFromFile();
+        
+        var limitsPath ="limits.json";
+        if (!File.Exists(limitsPath))
+        {
+            CreateLimitsFile(limitsPath);
+        }
+        var budgetLimits = LoadLimitsFile("limits.json");
 
         while (true)
         {
@@ -112,6 +126,11 @@ class Program
         { 
             Console.WriteLine("Invalid amount");
         }
+
+        if (!isIncome)
+        {
+            CheckSpendingLimits(_transactions, _limits);
+        }
     }
 
     static void ShowCategorySummary(List<Transaction> transactions)
@@ -189,5 +208,56 @@ class Program
         }
         
         Console.WriteLine();
+    }
+
+    static void CreateLimitsFile(string filePath)
+    {
+        var defaultLimits = new List<BudgetLimit>()
+        {
+            new BudgetLimit { Category = "Groceries", Limit = 400 },
+            new BudgetLimit { Category = "Rent", Limit = 900 },
+            new BudgetLimit { Category = "Entertainment", Limit = 100 }
+        };
+        
+        string json = JsonSerializer.Serialize(defaultLimits, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(filePath, json);
+        Console.WriteLine($"Default limits file created at {filePath}");
+    }
+
+    static List<BudgetLimit>? LoadLimitsFile(string filePath)
+    {
+        if (!File.Exists(filePath))
+            return new List<BudgetLimit>();
+
+        string json = File.ReadAllText(filePath);
+        return JsonSerializer.Deserialize<List<BudgetLimit>>(json, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    static void CheckSpendingLimits(List<Transaction> transactions, List<BudgetLimit> limits)
+    {
+        var currentMonth = DateTime.Now.Month;
+        var currentYear = DateTime.Now.Year;
+
+        var monthlyExpenses = transactions
+            .Where(transaction => transaction.Date.Month == currentMonth && transaction.Date.Year == currentYear &&
+                                  transaction.Amount < 0)
+            .GroupBy(transaction => transaction.Category)
+            .Select(g => new
+            {
+                Category = g.Key,
+                TotalSpent = Math.Abs(g.Sum(transaction => transaction.Amount))
+            });
+
+        foreach (var limit in limits)
+        {
+            var enumerable = monthlyExpenses.ToList();
+            var matching = enumerable.FirstOrDefault(expense => expense.Category!.Equals(limit.Category, StringComparison.OrdinalIgnoreCase));
+            if (matching != null && matching.TotalSpent > limit.Limit)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Warning! You have exceed your {limit.Category} budget! Limit: €{limit.Limit}, Spent: €{matching.TotalSpent}");
+                Console.ResetColor();
+            }
+        }
     }
 }

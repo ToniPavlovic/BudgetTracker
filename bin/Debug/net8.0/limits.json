@@ -1,0 +1,14 @@
+[
+  {
+    "Category": "Groceries",
+    "Limit": 400
+  },
+  {
+    "Category": "Rent",
+    "Limit": 900
+  },
+  {
+    "Category": "Entertainment",
+    "Limit": 100
+  }
+]
