@@ -8,7 +8,7 @@ class Program
     private static readonly string FilePath = "budget.json";
     private const string LimitsPath = "limits.json";
 
-    private static readonly List<BudgetLimit> _limits = new()
+    private static readonly List<BudgetLimit> Limits = new()
     {
         new BudgetLimit { Category = "Groceries", Limit = 400 },
         new BudgetLimit { Category = "Rent", Limit = 900 },
@@ -24,7 +24,7 @@ class Program
             CreateLimitsFile(LimitsPath);
         }
 
-        var budgetLimits = LoadLimitsFile(LimitsPath);
+        LoadLimitsFile(LimitsPath);
 
         while (true)
         {
@@ -32,10 +32,12 @@ class Program
             Console.WriteLine("1. Add Income");
             Console.WriteLine("2. Add Expense");
             Console.WriteLine("3. View Balance");
-            Console.WriteLine("4. View Transaction History");
-            Console.WriteLine("5. Show Category Summary");
-            Console.WriteLine("6. Show Monthly Report");
-            Console.WriteLine("7. Save & Exit");
+            Console.WriteLine("4. Edit Transaction");
+            Console.WriteLine("5. Delete Transaction");
+            Console.WriteLine("6. View Transaction History");
+            Console.WriteLine("7. Show Category Summary");
+            Console.WriteLine("8. Show Monthly Report");
+            Console.WriteLine("9. Save & Exit");
 
             Console.Write("Choose: ");
             string? choice = Console.ReadLine();
@@ -45,10 +47,12 @@ class Program
                 case "1": AddTransaction(isIncome: true); break;
                 case "2": AddTransaction(isIncome: false); break;
                 case "3": ShowBalance(); break;
-                case "4": ShowHistory(); break;
-                case "5": ShowCategorySummary(_transactions); break;
-                case "6": ShowMonthlyReport(_transactions); break;
-                case "7":
+                case "4": EditTransaction(); break;
+                case "5": DeleteTransaction(); break;
+                case "6": ShowHistory(); break;
+                case "7": ShowCategorySummary(_transactions); break;
+                case "8": ShowMonthlyReport(_transactions); break;
+                case "9":
                     SaveToFile();
                     Console.WriteLine($"Saved {_transactions.Count} transactions. Goodbye!");
                     return;
@@ -128,12 +132,81 @@ class Program
 
             if (!isIncome)
             {
-                WarnIfBudgetExceeded(_transactions, _limits);
+                WarnIfBudgetExceeded(_transactions, Limits);
             }
         }
         else
         {
             Console.WriteLine("Invalid amount.");
+        }
+    }
+    
+    static void EditTransaction()
+    {
+        if (_transactions.Count == 0)
+        {
+            Console.WriteLine("No transactions to edit");
+        }
+
+        Console.WriteLine("\n--- Edit Transaction ---");
+        for (int i = 0; i < _transactions.Count; i++)
+        {
+            Console.WriteLine($"{i}:  {_transactions[i]}");
+        }
+
+        Console.Write("Enter the number of transaction you want to edit: ");
+        if (int.TryParse(Console.ReadLine(), out int index) && index >= 0 && index < _transactions.Count)
+        {
+            var t = _transactions[index];
+
+            Console.Write($"New description (leave blank to keep `{t.Description}`): ");
+            string? description = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(description))
+                t.Description = description;
+            
+            Console.Write($"New category (leave blank to keep `{t.Category}`): ");
+            string? category = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(category))
+                t.Category = category;
+            
+            Console.Write($"New amount (leave blank to keep `{t.Amount}`): ");
+            string? amount = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(amount) && decimal.TryParse(amount, out decimal newAmount))
+                t.Amount = newAmount;
+
+            SaveToFile();
+            Console.WriteLine("Transaction updated and saved.");
+        }
+        else
+        {
+            Console.WriteLine("Invalid index.");
+        }
+    }
+    
+    static void DeleteTransaction()
+    {
+        if (_transactions.Count == 0)
+        {
+            Console.WriteLine("No transactions to delete");
+        }
+
+        Console.WriteLine("\n--- Delete Transaction ---");
+        for (int i = 0; i < _transactions.Count; i++)
+        {
+            Console.WriteLine($"{i}:  {_transactions[i]}");
+        }
+
+        Console.Write("Enter the number of transaction you want to delete: ");
+        if (int.TryParse(Console.ReadLine(), out int index) && index >= 0 && index < _transactions.Count)
+        {
+            Console.WriteLine($"Deleted: {_transactions[index]}");
+            _transactions.RemoveAt(index);
+            SaveToFile();
+            Console.WriteLine("Changes saved.");
+        }
+        else
+        {
+            Console.WriteLine("Invalid index.");
         }
     }
 
