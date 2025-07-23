@@ -5,6 +5,8 @@ namespace BudgetTracker;
 class Program
 {
     private static List<Transaction> _transactions = new();
+    private static Stack<List<Transaction>> _undoStack = new();
+    private static Stack<List<Transaction>> _redoStack = new();
     private static readonly string FilePath = "budget.json";
     private const string LimitsPath = "limits.json";
 
@@ -34,10 +36,12 @@ class Program
             Console.WriteLine("3. View Balance");
             Console.WriteLine("4. Edit Transaction");
             Console.WriteLine("5. Delete Transaction");
-            Console.WriteLine("6. View Transaction History");
-            Console.WriteLine("7. Show Category Summary");
-            Console.WriteLine("8. Show Monthly Report");
-            Console.WriteLine("9. Save & Exit");
+            Console.WriteLine("6. Undo Transaction");
+            Console.WriteLine("7. Redo Transaction");
+            Console.WriteLine("8. View Transaction History");
+            Console.WriteLine("9. Show Category Summary");
+            Console.WriteLine("10. Show Monthly Report");
+            Console.WriteLine("11. Save & Exit");
 
             Console.Write("Choose: ");
             string? choice = Console.ReadLine();
@@ -49,10 +53,12 @@ class Program
                 case "3": ShowBalance(); break;
                 case "4": EditTransaction(); break;
                 case "5": DeleteTransaction(); break;
-                case "6": ShowHistory(); break;
-                case "7": ShowCategorySummary(_transactions); break;
-                case "8": ShowMonthlyReport(_transactions); break;
-                case "9":
+                case "6": UndoTransaction(); break;
+                case "7": RedoTransaction(); break;
+                case "8": ShowHistory(); break;
+                case "9": ShowCategorySummary(_transactions); break;
+                case "10": ShowMonthlyReport(_transactions); break;
+                case "11":
                     SaveToFile();
                     Console.WriteLine($"Saved {_transactions.Count} transactions. Goodbye!");
                     return;
@@ -104,6 +110,9 @@ class Program
 
     static void AddTransaction(bool isIncome)
     {
+        _undoStack.Push(CloneTransactions());
+        _redoStack.Clear();
+        
         Console.Write("Description: ");
         string? description = Console.ReadLine();
 
@@ -210,6 +219,46 @@ class Program
         }
     }
 
+    static List<Transaction> CloneTransactions()
+    {
+        return _transactions
+            .Select(t => new Transaction
+            {
+                Date = t.Date,
+                Description = t.Description,
+                Category = t.Category,
+                Amount = t.Amount
+            }).ToList();
+    }
+    
+    static void UndoTransaction()
+    {
+        if (_undoStack.Count > 0)
+        {
+            _redoStack.Push(CloneTransactions());
+            _transactions = _undoStack.Pop();
+            Console.WriteLine("Undo completed.");
+        }
+        else
+        {
+            Console.WriteLine("No transaction to undo.");
+        }
+    }
+    
+    static void RedoTransaction()
+    {
+        if (_redoStack.Count > 0)
+        {
+            _undoStack.Push(CloneTransactions());
+            _transactions = _redoStack.Pop();
+            Console.WriteLine("Redo completed.");
+        }
+        else
+        {
+            Console.WriteLine("No transaction to redo.");
+        }
+    }
+
     static void ShowCategorySummary(List<Transaction> transactions)
     {
         if (transactions.Count == 0)
@@ -227,7 +276,7 @@ class Program
 
         foreach (var item in summary)
         {
-            string sign = item.Total >= 0 ? "+" : "-";
+            var sign = item.Total >= 0 ? "+" : "-";
             Console.WriteLine($"{item.Category?.PadRight(10)} | {sign}€{Math.Abs(item.Total):0.00}");
         }
 

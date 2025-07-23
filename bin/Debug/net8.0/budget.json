@@ -10,5 +10,17 @@
     "Description": "Food",
     "Category": "Food",
     "Amount": -400
+  },
+  {
+    "Date": "2025-07-23T18:55:34.2629038+02:00",
+    "Description": "Gym",
+    "Category": "Hobby",
+    "Amount": -50
+  },
+  {
+    "Date": "2025-07-23T18:57:34.4959998+02:00",
+    "Description": "Savings",
+    "Category": "Money",
+    "Amount": 300
   }
 ]
