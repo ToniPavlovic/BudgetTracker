@@ -1,7 +1,7 @@
 # 💰 Budget Tracker 
 
 A C# console application for tracking income and expenses. 
-It lets you log financial transactions with descriptions and categories, view your current balance, edit transactions, delete transactions, show summary by category, show monthly reports and review your full transaction history. 
+It lets you log financial transactions with descriptions and categories, view your current balance, edit transactions, delete transactions, undo transactions, redo transactions, show summary by category, show monthly reports and review your full transaction history. 
 All data is stored locally in a JSON file.
 
 ---
@@ -13,6 +13,8 @@ All data is stored locally in a JSON file.
 - Categorize each transaction (e.g. Food, Rent, Salary)
 - Edit transaction
 - Delete transaction
+- Undo transaction
+- Redo transaction
 - View transaction history
 - Show summary by category
 - Show monthly report
