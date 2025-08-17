@@ -5,10 +5,14 @@ namespace BudgetTracker;
 class Program
 {
     private static List<Transaction> _transactions = new();
+    private static List<User> _users = new();
+    private static User? _loggedInUser;
+    private static int _nextUserId = 1;
     private static Stack<List<Transaction>> _undoStack = new();
     private static Stack<List<Transaction>> _redoStack = new();
-    private static readonly string FilePath = "budget.json";
+    private const string FilePath = "budget.json";
     private const string LimitsPath = "limits.json";
+    private const string UsersPath = "users.json";
 
     private static readonly List<BudgetLimit> Limits = new()
     {
@@ -36,34 +40,44 @@ class Program
         while (true)
         {
             Console.WriteLine("\n--- Budget Tracker ---");
-            Console.WriteLine("1. Add Income");
-            Console.WriteLine("2. Add Expense");
-            Console.WriteLine("3. View Balance");
-            Console.WriteLine("4. Edit Transaction");
-            Console.WriteLine("5. Delete Transaction");
-            Console.WriteLine("6. Undo Transaction");
-            Console.WriteLine("7. Redo Transaction");
-            Console.WriteLine("8. View Transaction History");
-            Console.WriteLine("9. Show Category Summary");
-            Console.WriteLine("10. Show Monthly Report");
-            Console.WriteLine("11. Save & Exit");
+            Console.WriteLine("1. Login");
+            Console.WriteLine("2. Logout");
+            Console.WriteLine("3. Add Income");
+            Console.WriteLine("4. Add Expense");
+            Console.WriteLine("5. View Balance");
+            Console.WriteLine("6. Edit Transaction");
+            Console.WriteLine("7. Delete Transaction");
+            Console.WriteLine("8. Undo Transaction");
+            Console.WriteLine("9. Redo Transaction");
+            Console.WriteLine("10. View Transaction History");
+            Console.WriteLine("11. Show Category Summary");
+            Console.WriteLine("12. Show Monthly Report");
+            Console.WriteLine("13. Register User");
+            Console.WriteLine("14. List Users");
+            Console.WriteLine("15. Remove User");
+            Console.WriteLine("16. Save & Exit");
 
             Console.Write("Choose: ");
             var choice = Console.ReadLine();
 
             switch (choice)
             {
-                case "1": AddTransaction(isIncome: true); break;
-                case "2": AddTransaction(isIncome: false); break;
-                case "3": ShowBalance(); break;
-                case "4": EditTransaction(); break;
-                case "5": DeleteTransaction(); break;
-                case "6": UndoTransaction(); break;
-                case "7": RedoTransaction(); break;
-                case "8": ShowHistory(); break;
-                case "9": ShowCategorySummary(_transactions); break;
-                case "10": ShowMonthlyReport(_transactions); break;
-                case "11":
+                case "1": LogInUser(); break;
+                case "2": LogOutUser(); break;
+                case "3": AddTransaction(isIncome: true); break;
+                case "4": AddTransaction(isIncome: false); break;
+                case "5": ShowBalance(); break;
+                case "6": EditTransaction(); break;
+                case "7": DeleteTransaction(); break;
+                case "8": UndoTransaction(); break;
+                case "9": RedoTransaction(); break;
+                case "10": ShowHistory(); break;
+                case "11": ShowCategorySummary(_transactions); break;
+                case "12": ShowMonthlyReport(_transactions); break;
+                case "13": RegisterUser(); break;
+                case "14": ListUsers(); break;
+                case "15": RemoveUser(); break;
+                case "16":
                     SaveToFile();
                     Console.WriteLine($"Saved {_transactions.Count} transactions. Goodbye!");
                     return;
@@ -74,7 +88,7 @@ class Program
         }
     }
 
-    static void LoadFromFile()
+    private static void LoadFromFile()
     {
         if (File.Exists(FilePath))
         {
@@ -82,22 +96,37 @@ class Program
             _transactions = JsonSerializer.Deserialize<List<Transaction>>(json) ?? new List<Transaction>();
             Console.WriteLine("Loaded existing transactions.");
         }
+        Loadusers();
     }
 
     static void SaveToFile()
     {
         var options = new JsonSerializerOptions { WriteIndented = true };
         File.WriteAllText(FilePath, JsonSerializer.Serialize(_transactions, options));
+        
+        SaveUsers();
     }
 
     static void ShowBalance()
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         var total = _transactions.Sum(t => t.Amount);
         Console.WriteLine($"\nCurrent balance: ${total:0.00}");
     }
 
-    static void ShowHistory()
+    private static void ShowHistory()
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         if (_transactions.Count == 0)
         {
             Console.WriteLine("No transactions found.");
@@ -113,8 +142,14 @@ class Program
         }
     }
 
-    static void AddTransaction(bool isIncome)
+    private static void AddTransaction(bool isIncome)
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         _undoStack.Push(CloneTransactions());
         _redoStack.Clear();
         
@@ -155,8 +190,14 @@ class Program
         }
     }
     
-    static void EditTransaction()
+    private static void EditTransaction()
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         _undoStack.Push(CloneTransactions());
         _redoStack.Clear();
         
@@ -200,8 +241,14 @@ class Program
         }
     }
     
-    static void DeleteTransaction()
+    private static void DeleteTransaction()
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         _undoStack.Push(CloneTransactions());
         _redoStack.Clear();
         
@@ -230,7 +277,7 @@ class Program
         }
     }
 
-    static List<Transaction> CloneTransactions()
+    private static List<Transaction> CloneTransactions()
     {
         return _transactions
             .Select(t => new Transaction
@@ -242,8 +289,14 @@ class Program
             }).ToList();
     }
     
-    static void UndoTransaction()
+    private static void UndoTransaction()
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         if (_undoStack.Count > 0)
         {
             _redoStack.Push(CloneTransactions());
@@ -257,8 +310,14 @@ class Program
         SaveToFile();
     }
     
-    static void RedoTransaction()
+    private static void RedoTransaction()
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         if (_redoStack.Count > 0)
         {
             _undoStack.Push(CloneTransactions());
@@ -272,8 +331,14 @@ class Program
         SaveToFile();
     }
 
-    static void ShowCategorySummary(List<Transaction> transactions)
+    private static void ShowCategorySummary(List<Transaction> transactions)
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         if (transactions.Count == 0)
         {
             Console.WriteLine("No transactions found.");
@@ -296,8 +361,14 @@ class Program
         Console.WriteLine();
     }
 
-    static void ShowMonthlyReport(List<Transaction> transactions)
+    private static void ShowMonthlyReport(List<Transaction> transactions)
     {
+        if (_loggedInUser == null)
+        {
+            Console.WriteLine("You must be logged in first.");
+            return;
+        }
+        
         Console.Write("\nEnter month and year (MM-yyyy) or leave blank for current: ");
         var input = Console.ReadLine();
 
@@ -365,7 +436,7 @@ class Program
         Console.WriteLine($"Default limits file created at {filePath}");
     }
 
-    static List<BudgetLimit>? LoadLimitsFile(string filePath)
+    private static List<BudgetLimit>? LoadLimitsFile(string filePath)
     {
         if (!File.Exists(filePath))
             return new List<BudgetLimit>();
@@ -397,6 +468,134 @@ class Program
                 Console.WriteLine($"⚠️  Warning: You exceeded your {limit.Category} budget! Limit: €{limit.Limit}, Spent: €{match.TotalSpent}");
                 Console.ResetColor();
             }
+        }
+    }
+
+    private static void RegisterUser()
+    {
+        if (_loggedInUser == null || !_loggedInUser.IsAdmin)
+        {
+            Console.WriteLine("Only admin users can perform this action.");
+            return;
+        }
+
+        Console.Write("Name: ");
+        var name = Console.ReadLine();
+        Console.Write("Password: ");
+        var password = Console.ReadLine();
+        bool isAdmin = _users.Count == 0; // only the first user is the admin
+        _users.Add(new User {Id = _nextUserId++, Name = name, Password = password, IsAdmin = isAdmin});
+        Console.WriteLine("User registered successfully.");
+        SaveToFile();
+    }
+
+    private static void RemoveUser()
+    {
+        if (_loggedInUser is not { IsAdmin: true })
+        {
+            Console.WriteLine("Only admin users can perform this action.");
+            return;
+        }
+
+        ListUsers();
+        Console.Write("Enter the ID of the user you wish to remove: ");
+        int.TryParse(Console.ReadLine(), out int id);
+        
+        bool removed = _users.RemoveAll(user => user.Id == id) > 0;
+        if (removed)
+        {
+            Console.WriteLine("The user was successfully removed.");
+        }
+        else
+        {
+            Console.WriteLine("Invalid ID. No matches found.");
+        }
+        SaveToFile();
+    }
+
+    private static void LogInUser()
+    {
+        Console.Write("Name: ");
+        var name = Console.ReadLine();
+        Console.Write("Password: ");
+        var password = Console.ReadLine();
+
+        bool found = false;
+        foreach (User user in _users)
+        {
+            if (user.Name == name && user.Password == password)
+            {
+                _loggedInUser = user;
+                Console.WriteLine("Logged in as: " + user.Name);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            Console.WriteLine("Invalid credentials.");
+        }
+    }
+
+    private static void LogOutUser()
+    {
+        if (_loggedInUser != null)
+        {
+            Console.WriteLine("Logged out." + _loggedInUser.Name);
+            _loggedInUser = null;
+        }
+        else
+        {
+            Console.WriteLine("No user is currently logged in.");
+        }
+    }
+    
+    private static void ListUsers()
+    {
+        if (_users.Count == 0)
+        {
+            Console.WriteLine("No users registered.");
+        }
+        else
+        {
+            foreach (User user in _users)
+            {
+                Console.WriteLine(user);
+            }
+        }
+    }
+
+    private static void SaveUsers()
+    {
+        try
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            File.WriteAllText(UsersPath, JsonSerializer.Serialize(_transactions, options));
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Error saving users: " + e.Message);
+        }
+    }
+    
+    private static void Loadusers()
+    {
+        if (!File.Exists(UsersPath)) return;
+
+        try
+        {
+            string json = File.ReadAllText(UsersPath);
+            var loadedUsers = JsonSerializer.Deserialize<List<User>>(json);
+            if (loadedUsers != null)
+            {
+                _users.AddRange(loadedUsers);
+                _nextUserId = _users.Any() ? _users.Max(u => u.Id) + 1 : 1;
+            }
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine("Error loading users: " + e.Message);
         }
     }
 }
