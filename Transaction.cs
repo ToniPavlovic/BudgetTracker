@@ -9,7 +9,7 @@ public class Transaction
 
     public override string ToString()
     {
-        String type = Amount >= 0 ? "+" : "-";
+        var type = Amount >= 0 ? "+" : "-";
         return $"{Date.ToShortDateString()} | {Category,-10} | {type}${Math.Abs(Amount),7} | {Description}";
     }
 }

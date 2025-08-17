@@ -26,7 +26,12 @@ class Program
             CreateLimitsFile(LimitsPath);
         }
 
-        LoadLimitsFile(LimitsPath);
+        var loadedLimits = LoadLimitsFile(LimitsPath);
+        if (loadedLimits != null && loadedLimits.Any())
+        {
+            Limits.Clear();
+            Limits.AddRange(loadedLimits);
+        }
 
         while (true)
         {
@@ -44,7 +49,7 @@ class Program
             Console.WriteLine("11. Save & Exit");
 
             Console.Write("Choose: ");
-            string? choice = Console.ReadLine();
+            var choice = Console.ReadLine();
 
             switch (choice)
             {
@@ -73,7 +78,7 @@ class Program
     {
         if (File.Exists(FilePath))
         {
-            string json = File.ReadAllText(FilePath);
+            var json = File.ReadAllText(FilePath);
             _transactions = JsonSerializer.Deserialize<List<Transaction>>(json) ?? new List<Transaction>();
             Console.WriteLine("Loaded existing transactions.");
         }
@@ -87,8 +92,8 @@ class Program
 
     static void ShowBalance()
     {
-        decimal total = _transactions.Sum(t => t.Amount);
-        Console.WriteLine($"\nCurrent balance: €{total:0.00}");
+        var total = _transactions.Sum(t => t.Amount);
+        Console.WriteLine($"\nCurrent balance: ${total:0.00}");
     }
 
     static void ShowHistory()
@@ -114,10 +119,10 @@ class Program
         _redoStack.Clear();
         
         Console.Write("Description: ");
-        string? description = Console.ReadLine();
+        var description = Console.ReadLine();
 
         Console.Write("Category (e.g. Food, Salary, Rent): ");
-        string? category = Console.ReadLine();
+        var category = Console.ReadLine();
 
         if (string.IsNullOrWhiteSpace(description) || string.IsNullOrWhiteSpace(category))
         {
@@ -126,7 +131,7 @@ class Program
         }
 
         Console.Write("Amount: ");
-        if (decimal.TryParse(Console.ReadLine(), out decimal amount))
+        if (decimal.TryParse(Console.ReadLine(), out var amount))
         {
             if (!isIncome) amount *= -1;
 
@@ -152,35 +157,38 @@ class Program
     
     static void EditTransaction()
     {
+        _undoStack.Push(CloneTransactions());
+        _redoStack.Clear();
+        
         if (_transactions.Count == 0)
         {
             Console.WriteLine("No transactions to edit");
         }
 
         Console.WriteLine("\n--- Edit Transaction ---");
-        for (int i = 0; i < _transactions.Count; i++)
+        for (var i = 0; i < _transactions.Count; i++)
         {
             Console.WriteLine($"{i}:  {_transactions[i]}");
         }
 
         Console.Write("Enter the number of transaction you want to edit: ");
-        if (int.TryParse(Console.ReadLine(), out int index) && index >= 0 && index < _transactions.Count)
+        if (int.TryParse(Console.ReadLine(), out var index) && index >= 0 && index < _transactions.Count)
         {
             var t = _transactions[index];
 
             Console.Write($"New description (leave blank to keep `{t.Description}`): ");
-            string? description = Console.ReadLine();
+            var description = Console.ReadLine();
             if (!string.IsNullOrWhiteSpace(description))
                 t.Description = description;
             
             Console.Write($"New category (leave blank to keep `{t.Category}`): ");
-            string? category = Console.ReadLine();
+            var category = Console.ReadLine();
             if (!string.IsNullOrWhiteSpace(category))
                 t.Category = category;
             
             Console.Write($"New amount (leave blank to keep `{t.Amount}`): ");
-            string? amount = Console.ReadLine();
-            if (!string.IsNullOrWhiteSpace(amount) && decimal.TryParse(amount, out decimal newAmount))
+            var amount = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(amount) && decimal.TryParse(amount, out var newAmount))
                 t.Amount = newAmount;
 
             SaveToFile();
@@ -194,19 +202,22 @@ class Program
     
     static void DeleteTransaction()
     {
+        _undoStack.Push(CloneTransactions());
+        _redoStack.Clear();
+        
         if (_transactions.Count == 0)
         {
             Console.WriteLine("No transactions to delete");
         }
 
         Console.WriteLine("\n--- Delete Transaction ---");
-        for (int i = 0; i < _transactions.Count; i++)
+        for (var i = 0; i < _transactions.Count; i++)
         {
             Console.WriteLine($"{i}:  {_transactions[i]}");
         }
 
         Console.Write("Enter the number of transaction you want to delete: ");
-        if (int.TryParse(Console.ReadLine(), out int index) && index >= 0 && index < _transactions.Count)
+        if (int.TryParse(Console.ReadLine(), out var index) && index >= 0 && index < _transactions.Count)
         {
             Console.WriteLine($"Deleted: {_transactions[index]}");
             _transactions.RemoveAt(index);
@@ -243,6 +254,7 @@ class Program
         {
             Console.WriteLine("No transaction to undo.");
         }
+        SaveToFile();
     }
     
     static void RedoTransaction()
@@ -257,6 +269,7 @@ class Program
         {
             Console.WriteLine("No transaction to redo.");
         }
+        SaveToFile();
     }
 
     static void ShowCategorySummary(List<Transaction> transactions)
@@ -286,7 +299,7 @@ class Program
     static void ShowMonthlyReport(List<Transaction> transactions)
     {
         Console.Write("\nEnter month and year (MM-yyyy) or leave blank for current: ");
-        string? input = Console.ReadLine();
+        var input = Console.ReadLine();
 
         DateTime targetDate;
 
@@ -310,9 +323,9 @@ class Program
             return;
         }
 
-        decimal income = monthTransactions.Where(t => t.Amount > 0).Sum(t => t.Amount);
-        decimal expenses = monthTransactions.Where(t => t.Amount < 0).Sum(t => t.Amount);
-        decimal net = income + expenses;
+        var income = monthTransactions.Where(t => t.Amount > 0).Sum(t => t.Amount);
+        var expenses = monthTransactions.Where(t => t.Amount < 0).Sum(t => t.Amount);
+        var net = income + expenses;
 
         Console.WriteLine($"\n--- {targetDate:MMMM yyyy} Report ---");
         Console.WriteLine($"Income:   {income,10:C}");
@@ -347,7 +360,7 @@ class Program
             new BudgetLimit { Category = "Entertainment", Limit = 100 }
         };
 
-        string json = JsonSerializer.Serialize(defaultLimits, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(defaultLimits, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(filePath, json);
         Console.WriteLine($"Default limits file created at {filePath}");
     }
@@ -357,7 +370,7 @@ class Program
         if (!File.Exists(filePath))
             return new List<BudgetLimit>();
 
-        string json = File.ReadAllText(filePath);
+        var json = File.ReadAllText(filePath);
         return JsonSerializer.Deserialize<List<BudgetLimit>>(json, new JsonSerializerOptions { WriteIndented = true });
     }
 
