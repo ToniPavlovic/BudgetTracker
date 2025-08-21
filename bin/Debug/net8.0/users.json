@@ -1,32 +1,8 @@
 [
   {
-    "Date": "2025-07-10T21:53:54.0134107+02:00",
-    "Description": "Pay for August",
-    "Category": "Salary",
-    "Amount": 3000
-  },
-  {
-    "Date": "2025-07-10T21:54:05.0796591+02:00",
-    "Description": "Food",
-    "Category": "Food",
-    "Amount": -400
-  },
-  {
-    "Date": "2025-07-23T18:55:34.2629038+02:00",
-    "Description": "Gym",
-    "Category": "Hobby",
-    "Amount": -50
-  },
-  {
-    "Date": "2025-07-23T18:57:34.4959998+02:00",
-    "Description": "Savings",
-    "Category": "Money",
-    "Amount": 300
-  },
-  {
-    "Date": "2025-08-17T22:33:17.7295957+02:00",
-    "Description": "Clothes",
-    "Category": "Clothes",
-    "Amount": -100
+    "Id": 1,
+    "Name": "Toni Pavlovic",
+    "Password": "12345",
+    "IsAdmin": true
   }
 ]

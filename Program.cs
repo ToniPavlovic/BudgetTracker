@@ -8,8 +8,8 @@ class Program
     private static List<User> _users = new();
     private static User? _loggedInUser;
     private static int _nextUserId = 1;
-    private static Stack<List<Transaction>> _undoStack = new();
-    private static Stack<List<Transaction>> _redoStack = new();
+    private static readonly Stack<List<Transaction>> UndoStack = new();
+    private static readonly Stack<List<Transaction>> RedoStack = new();
     private const string FilePath = "budget.json";
     private const string LimitsPath = "limits.json";
     private const string UsersPath = "users.json";
@@ -150,8 +150,8 @@ class Program
             return;
         }
         
-        _undoStack.Push(CloneTransactions());
-        _redoStack.Clear();
+        UndoStack.Push(CloneTransactions());
+        RedoStack.Clear();
         
         Console.Write("Description: ");
         var description = Console.ReadLine();
@@ -198,8 +198,8 @@ class Program
             return;
         }
         
-        _undoStack.Push(CloneTransactions());
-        _redoStack.Clear();
+        UndoStack.Push(CloneTransactions());
+        RedoStack.Clear();
         
         if (_transactions.Count == 0)
         {
@@ -249,8 +249,8 @@ class Program
             return;
         }
         
-        _undoStack.Push(CloneTransactions());
-        _redoStack.Clear();
+        UndoStack.Push(CloneTransactions());
+        RedoStack.Clear();
         
         if (_transactions.Count == 0)
         {
@@ -297,10 +297,10 @@ class Program
             return;
         }
         
-        if (_undoStack.Count > 0)
+        if (UndoStack.Count > 0)
         {
-            _redoStack.Push(CloneTransactions());
-            _transactions = _undoStack.Pop();
+            RedoStack.Push(CloneTransactions());
+            _transactions = UndoStack.Pop();
             Console.WriteLine("Undo completed.");
         }
         else
@@ -318,10 +318,10 @@ class Program
             return;
         }
         
-        if (_redoStack.Count > 0)
+        if (RedoStack.Count > 0)
         {
-            _undoStack.Push(CloneTransactions());
-            _transactions = _redoStack.Pop();
+            UndoStack.Push(CloneTransactions());
+            _transactions = RedoStack.Pop();
             Console.WriteLine("Redo completed.");
         }
         else
@@ -473,7 +473,7 @@ class Program
 
     private static void RegisterUser()
     {
-        if (_loggedInUser == null || !_loggedInUser.IsAdmin)
+        if (_loggedInUser is not { IsAdmin: true })
         {
             Console.WriteLine("Only admin users can perform this action.");
             return;
@@ -484,7 +484,7 @@ class Program
         Console.Write("Password: ");
         var password = Console.ReadLine();
         bool isAdmin = _users.Count == 0; // only the first user is the admin
-        _users.Add(new User {Id = _nextUserId++, Name = name, Password = password, IsAdmin = isAdmin});
+        _users.Add(new User(_nextUserId, name, password, isAdmin));
         Console.WriteLine("User registered successfully.");
         SaveToFile();
     }
@@ -499,18 +499,22 @@ class Program
 
         ListUsers();
         Console.Write("Enter the ID of the user you wish to remove: ");
-        int.TryParse(Console.ReadLine(), out int id);
+        if (!int.TryParse(Console.ReadLine(), out int id))
+        {
+            Console.WriteLine("Invalid input, please enter a numeric ID.");
+            return;
+        }
         
         bool removed = _users.RemoveAll(user => user.Id == id) > 0;
         if (removed)
         {
             Console.WriteLine("The user was successfully removed.");
+            SaveToFile();
         }
         else
         {
             Console.WriteLine("Invalid ID. No matches found.");
         }
-        SaveToFile();
     }
 
     private static void LogInUser()
@@ -571,7 +575,7 @@ class Program
         try
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(UsersPath, JsonSerializer.Serialize(_transactions, options));
+            File.WriteAllText(UsersPath, JsonSerializer.Serialize(_users, options));
         }
         catch (Exception e)
         {
