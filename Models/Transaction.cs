@@ -1,11 +1,11 @@
-namespace BudgetTracker;
+namespace BudgetTracker.Models;
 
 public class Transaction
 {
-    internal DateTime Date { get; set; } =  DateTime.Now;
-    internal string? Description { get; set; }
-    internal string? Category { get; set; }
-    internal decimal Amount { get; set; }
+    public DateTime Date { get; set; } =  DateTime.Now;
+    public string? Description { get; set; }
+    public string? Category { get; set; }
+    public decimal Amount { get; set; }
 
     public override string ToString()
     {

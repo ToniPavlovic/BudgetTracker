@@ -1,8 +1,6 @@
 [
   {
-    "Id": 1,
     "Name": "Toni Pavlovic",
-    "Password": "12345",
-    "IsAdmin": true
+    "Password": "12345"
   }
 ]

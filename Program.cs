@@ -1,605 +1,216 @@
 ﻿using System.Text.Json;
-
-namespace BudgetTracker;
+using BudgetTracker.Models;
+using BudgetTracker.Services;
 
 class Program
 {
-    private static List<Transaction> _transactions = new();
-    private static List<User> _users = new();
-    private static User? _loggedInUser;
-    private static int _nextUserId = 1;
-    private static readonly Stack<List<Transaction>> UndoStack = new();
-    private static readonly Stack<List<Transaction>> RedoStack = new();
     private const string FilePath = "budget.json";
-    private const string LimitsPath = "limits.json";
     private const string UsersPath = "users.json";
+    private const string LimitsPath = "limits.json";
 
-    private static readonly List<BudgetLimit> Limits = new()
-    {
-        new BudgetLimit { Category = "Groceries", Limit = 400 },
-        new BudgetLimit { Category = "Rent", Limit = 900 },
-        new BudgetLimit { Category = "Entertainment", Limit = 100 }
-    };
+    private static readonly TransactionService Transactions = new();
+    private static readonly UserService Users = new();
+    private static readonly BudgetService Budget = new();
 
     static void Main()
     {
-        LoadFromFile();
-
-        if (!File.Exists(LimitsPath))
-        {
-            CreateLimitsFile(LimitsPath);
-        }
-
-        var loadedLimits = LoadLimitsFile(LimitsPath);
-        if (loadedLimits != null && loadedLimits.Any())
-        {
-            Limits.Clear();
-            Limits.AddRange(loadedLimits);
-        }
+        LoadUsers();
+        LoadTransactions();
+        LoadLimits();
 
         while (true)
         {
             Console.WriteLine("\n--- Budget Tracker ---");
             Console.WriteLine("1. Login");
             Console.WriteLine("2. Logout");
-            Console.WriteLine("3. Add Income");
-            Console.WriteLine("4. Add Expense");
-            Console.WriteLine("5. View Balance");
+            Console.WriteLine("3. View Balance");
+            Console.WriteLine("4. Add Income");
+            Console.WriteLine("5. Add Expense");
             Console.WriteLine("6. Edit Transaction");
             Console.WriteLine("7. Delete Transaction");
             Console.WriteLine("8. Undo Transaction");
             Console.WriteLine("9. Redo Transaction");
-            Console.WriteLine("10. View Transaction History");
-            Console.WriteLine("11. Show Category Summary");
-            Console.WriteLine("12. Show Monthly Report");
-            Console.WriteLine("13. Register User");
-            Console.WriteLine("14. List Users");
-            Console.WriteLine("15. Remove User");
-            Console.WriteLine("16. Save & Exit");
+            Console.WriteLine("10. Show Transactions History");
+            Console.WriteLine("11. Exit");
 
             Console.Write("Choose: ");
             var choice = Console.ReadLine();
 
             switch (choice)
             {
-                case "1": LogInUser(); break;
-                case "2": LogOutUser(); break;
-                case "3": AddTransaction(isIncome: true); break;
-                case "4": AddTransaction(isIncome: false); break;
-                case "5": ShowBalance(); break;
+                case "1": Login(); break;
+                case "2": Users.Logout(); break;
+                case "3":
+                    if (!RequireLogin()) break;
+                    Console.WriteLine($"Balance: {Transactions.GetBalance():0.00}");
+                    break;
+                case "4": AddTransaction(true); break;
+                case "5": AddTransaction(false); break;
                 case "6": EditTransaction(); break;
                 case "7": DeleteTransaction(); break;
                 case "8": UndoTransaction(); break;
                 case "9": RedoTransaction(); break;
-                case "10": ShowHistory(); break;
-                case "11": ShowCategorySummary(_transactions); break;
-                case "12": ShowMonthlyReport(_transactions); break;
-                case "13": RegisterUser(); break;
-                case "14": ListUsers(); break;
-                case "15": RemoveUser(); break;
-                case "16":
-                    SaveToFile();
-                    Console.WriteLine($"Saved {_transactions.Count} transactions. Goodbye!");
-                    return;
-                default:
-                    Console.WriteLine("Invalid choice!");
-                    break;
+                case "10": ShowTransactionsHistory(); break;
+                case "11": SaveAll(); return;
+                default: Console.WriteLine("Invalid choice!"); break;
             }
         }
     }
 
-    private static void LoadFromFile()
+    private static bool RequireLogin()
     {
-        if (File.Exists(FilePath))
+        if (Users.LoggedInUser == null)
         {
-            var json = File.ReadAllText(FilePath);
-            _transactions = JsonSerializer.Deserialize<List<Transaction>>(json) ?? new List<Transaction>();
-            Console.WriteLine("Loaded existing transactions.");
+            Console.WriteLine("You must be logged in first!");
+            return false;
         }
-        Loadusers();
-    }
-
-    static void SaveToFile()
-    {
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        File.WriteAllText(FilePath, JsonSerializer.Serialize(_transactions, options));
-        
-        SaveUsers();
-    }
-
-    static void ShowBalance()
-    {
-        if (_loggedInUser == null)
-        {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        var total = _transactions.Sum(t => t.Amount);
-        Console.WriteLine($"\nCurrent balance: ${total:0.00}");
-    }
-
-    private static void ShowHistory()
-    {
-        if (_loggedInUser == null)
-        {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        if (_transactions.Count == 0)
-        {
-            Console.WriteLine("No transactions found.");
-            return;
-        }
-
-        Console.WriteLine("\nDate     | Category   | Amount   | Description");
-        Console.WriteLine("-----------------------------------------------");
-
-        foreach (var transaction in _transactions.OrderByDescending(t => t.Date))
-        {
-            Console.WriteLine(transaction);
-        }
+        return true;
     }
 
     private static void AddTransaction(bool isIncome)
     {
-        if (_loggedInUser == null)
-        {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        UndoStack.Push(CloneTransactions());
-        RedoStack.Clear();
-        
+        if (!RequireLogin()) return;
+
         Console.Write("Description: ");
-        var description = Console.ReadLine();
-
-        Console.Write("Category (e.g. Food, Salary, Rent): ");
-        var category = Console.ReadLine();
-
-        if (string.IsNullOrWhiteSpace(description) || string.IsNullOrWhiteSpace(category))
+        var desc = Console.ReadLine()!;
+        Console.Write("Category: ");
+        var cat = Console.ReadLine()!;
+        Console.Write("Amount: ");
+        if (!decimal.TryParse(Console.ReadLine(), out var amount))
         {
-            Console.WriteLine("Category and Description are required.");
+            Console.WriteLine("Invalid amount!");
             return;
         }
+        if (!isIncome) amount *= -1;
 
-        Console.Write("Amount: ");
-        if (decimal.TryParse(Console.ReadLine(), out var amount))
+        Transactions.AddTransaction(new Transaction
         {
-            if (!isIncome) amount *= -1;
+            Description = desc,
+            Category = cat,
+            Amount = amount,
+            Date = DateTime.Now
+        });
 
-            _transactions.Add(new Transaction
-            {
-                Description = description,
-                Category = category,
-                Amount = amount
-            });
-
-            Console.WriteLine($"{(isIncome ? "Income" : "Expense")} recorded.");
-
-            if (!isIncome)
-            {
-                WarnIfBudgetExceeded(_transactions, Limits);
-            }
-        }
-        else
-        {
-            Console.WriteLine("Invalid amount.");
-        }
+        foreach (var w in Budget.CheckExceeded(Transactions.Transactions))
+            Console.WriteLine(w);
     }
-    
+
     private static void EditTransaction()
     {
-        if (_loggedInUser == null)
-        {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        UndoStack.Push(CloneTransactions());
-        RedoStack.Clear();
-        
-        if (_transactions.Count == 0)
-        {
-            Console.WriteLine("No transactions to edit");
-        }
+        if (!RequireLogin()) return;
 
-        Console.WriteLine("\n--- Edit Transaction ---");
-        for (var i = 0; i < _transactions.Count; i++)
-        {
-            Console.WriteLine($"{i}:  {_transactions[i]}");
-        }
+        ShowTransactionsHistory();
+        Console.Write("Enter index to edit: ");
+        if (!int.TryParse(Console.ReadLine(), out var idx)) return;
 
-        Console.Write("Enter the number of transaction you want to edit: ");
-        if (int.TryParse(Console.ReadLine(), out var index) && index >= 0 && index < _transactions.Count)
-        {
-            var t = _transactions[index];
+        Console.Write("New Description: ");
+        var desc = Console.ReadLine()!;
+        Console.Write("New Category: ");
+        var cat = Console.ReadLine()!;
+        Console.Write("New Amount: ");
+        decimal.TryParse(Console.ReadLine(), out var amt);
 
-            Console.Write($"New description (leave blank to keep `{t.Description}`): ");
-            var description = Console.ReadLine();
-            if (!string.IsNullOrWhiteSpace(description))
-                t.Description = description;
-            
-            Console.Write($"New category (leave blank to keep `{t.Category}`): ");
-            var category = Console.ReadLine();
-            if (!string.IsNullOrWhiteSpace(category))
-                t.Category = category;
-            
-            Console.Write($"New amount (leave blank to keep `{t.Amount}`): ");
-            var amount = Console.ReadLine();
-            if (!string.IsNullOrWhiteSpace(amount) && decimal.TryParse(amount, out var newAmount))
-                t.Amount = newAmount;
-
-            SaveToFile();
-            Console.WriteLine("Transaction updated and saved.");
-        }
-        else
+        Transactions.EditTransaction(idx, new Transaction
         {
-            Console.WriteLine("Invalid index.");
-        }
+            Description = desc,
+            Category = cat,
+            Amount = amt,
+            Date = DateTime.Now
+        });
     }
-    
+
     private static void DeleteTransaction()
     {
-        if (_loggedInUser == null)
-        {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        UndoStack.Push(CloneTransactions());
-        RedoStack.Clear();
-        
-        if (_transactions.Count == 0)
-        {
-            Console.WriteLine("No transactions to delete");
-        }
+        if (!RequireLogin()) return;
 
-        Console.WriteLine("\n--- Delete Transaction ---");
-        for (var i = 0; i < _transactions.Count; i++)
+        ShowTransactionsHistory();
+        Console.Write("Enter index to delete: ");
+        if (int.TryParse(Console.ReadLine(), out var idx))
         {
-            Console.WriteLine($"{i}:  {_transactions[i]}");
-        }
-
-        Console.Write("Enter the number of transaction you want to delete: ");
-        if (int.TryParse(Console.ReadLine(), out var index) && index >= 0 && index < _transactions.Count)
-        {
-            Console.WriteLine($"Deleted: {_transactions[index]}");
-            _transactions.RemoveAt(index);
-            SaveToFile();
-            Console.WriteLine("Changes saved.");
-        }
-        else
-        {
-            Console.WriteLine("Invalid index.");
+            Transactions.DeleteTransaction(idx);
         }
     }
 
-    private static List<Transaction> CloneTransactions()
-    {
-        return _transactions
-            .Select(t => new Transaction
-            {
-                Date = t.Date,
-                Description = t.Description,
-                Category = t.Category,
-                Amount = t.Amount
-            }).ToList();
-    }
-    
     private static void UndoTransaction()
     {
-        if (_loggedInUser == null)
-        {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        if (UndoStack.Count > 0)
-        {
-            RedoStack.Push(CloneTransactions());
-            _transactions = UndoStack.Pop();
-            Console.WriteLine("Undo completed.");
-        }
-        else
-        {
-            Console.WriteLine("No transaction to undo.");
-        }
-        SaveToFile();
+        if (!RequireLogin()) return;
+        Transactions.UndoTransaction();
+        Console.WriteLine("Undo completed.");
     }
-    
+
     private static void RedoTransaction()
     {
-        if (_loggedInUser == null)
-        {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        if (RedoStack.Count > 0)
-        {
-            UndoStack.Push(CloneTransactions());
-            _transactions = RedoStack.Pop();
-            Console.WriteLine("Redo completed.");
-        }
-        else
-        {
-            Console.WriteLine("No transaction to redo.");
-        }
-        SaveToFile();
+        if (!RequireLogin()) return;
+        Transactions.RedoTransaction();
+        Console.WriteLine("Redo completed.");
     }
 
-    private static void ShowCategorySummary(List<Transaction> transactions)
+    private static void ShowTransactionsHistory()
     {
-        if (_loggedInUser == null)
+        if (!RequireLogin()) return;
+
+        var i = 0;
+        foreach (var t in Transactions.Transactions)
         {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        if (transactions.Count == 0)
-        {
-            Console.WriteLine("No transactions found.");
-            return;
-        }
-
-        Console.WriteLine("\n--- Category Summary ---");
-
-        var summary = transactions
-            .GroupBy(t => t.Category)
-            .Select(g => new { Category = g.Key, Total = g.Sum(t => t.Amount) })
-            .OrderByDescending(s => Math.Abs(s.Total));
-
-        foreach (var item in summary)
-        {
-            var sign = item.Total >= 0 ? "+" : "-";
-            Console.WriteLine($"{item.Category?.PadRight(10)} | {sign}€{Math.Abs(item.Total):0.00}");
-        }
-
-        Console.WriteLine();
-    }
-
-    private static void ShowMonthlyReport(List<Transaction> transactions)
-    {
-        if (_loggedInUser == null)
-        {
-            Console.WriteLine("You must be logged in first.");
-            return;
-        }
-        
-        Console.Write("\nEnter month and year (MM-yyyy) or leave blank for current: ");
-        var input = Console.ReadLine();
-
-        DateTime targetDate;
-
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            targetDate = DateTime.Now;
-        }
-        else if (!DateTime.TryParseExact(input, "MM-yyyy", null, System.Globalization.DateTimeStyles.None, out targetDate))
-        {
-            Console.WriteLine("Invalid format. Please use MM-yyyy.\n");
-            return;
-        }
-
-        var monthTransactions = transactions
-            .Where(t => t.Date.Month == targetDate.Month && t.Date.Year == targetDate.Year)
-            .ToList();
-
-        if (!monthTransactions.Any())
-        {
-            Console.WriteLine("No transactions found for that month.\n");
-            return;
-        }
-
-        var income = monthTransactions.Where(t => t.Amount > 0).Sum(t => t.Amount);
-        var expenses = monthTransactions.Where(t => t.Amount < 0).Sum(t => t.Amount);
-        var net = income + expenses;
-
-        Console.WriteLine($"\n--- {targetDate:MMMM yyyy} Report ---");
-        Console.WriteLine($"Income:   {income,10:C}");
-        Console.WriteLine($"Expenses: {expenses,10:C}");
-        Console.WriteLine($"Net:      {net,10:C}\n");
-
-        var topCategories = monthTransactions
-            .Where(t => t.Amount < 0)
-            .GroupBy(t => t.Category)
-            .Select(g => new { Category = g.Key, Total = g.Sum(t => t.Amount) })
-            .OrderBy(s => s.Total)
-            .Take(3);
-
-        if (topCategories.Any())
-        {
-            Console.WriteLine("Top Expense Categories:");
-            foreach (var category in topCategories)
-            {
-                Console.WriteLine($" {category.Category?.PadRight(10)}: €{Math.Abs(category.Total):0.00}");
-            }
-        }
-
-        Console.WriteLine();
-    }
-
-    static void CreateLimitsFile(string filePath)
-    {
-        var defaultLimits = new List<BudgetLimit>
-        {
-            new BudgetLimit { Category = "Groceries", Limit = 400 },
-            new BudgetLimit { Category = "Rent", Limit = 900 },
-            new BudgetLimit { Category = "Entertainment", Limit = 100 }
-        };
-
-        var json = JsonSerializer.Serialize(defaultLimits, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(filePath, json);
-        Console.WriteLine($"Default limits file created at {filePath}");
-    }
-
-    private static List<BudgetLimit>? LoadLimitsFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            return new List<BudgetLimit>();
-
-        var json = File.ReadAllText(filePath);
-        return JsonSerializer.Deserialize<List<BudgetLimit>>(json, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    static void WarnIfBudgetExceeded(List<Transaction> transactions, List<BudgetLimit> limits)
-    {
-        var currentMonth = DateTime.Now.Month;
-        var currentYear = DateTime.Now.Year;
-
-        var monthlyExpenses = transactions
-            .Where(t => t.Date.Month == currentMonth && t.Date.Year == currentYear && t.Amount < 0)
-            .GroupBy(t => t.Category)
-            .Select(g => new
-            {
-                Category = g.Key,
-                TotalSpent = Math.Abs(g.Sum(t => t.Amount))
-            });
-
-        foreach (var limit in limits)
-        {
-            var match = monthlyExpenses.FirstOrDefault(e => e.Category!.Equals(limit.Category, StringComparison.OrdinalIgnoreCase));
-            if (match != null && match.TotalSpent > limit.Limit)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"⚠️  Warning: You exceeded your {limit.Category} budget! Limit: €{limit.Limit}, Spent: €{match.TotalSpent}");
-                Console.ResetColor();
-            }
+            Console.WriteLine($"[{i}] {t.Date:d} | {t.Category} | {t.Description} | {t.Amount}");
+            i++;
         }
     }
 
-    private static void RegisterUser()
-    {
-        if (_loggedInUser is not { IsAdmin: true })
-        {
-            Console.WriteLine("Only admin users can perform this action.");
-            return;
-        }
-
-        Console.Write("Name: ");
-        var name = Console.ReadLine();
-        Console.Write("Password: ");
-        var password = Console.ReadLine();
-        bool isAdmin = _users.Count == 0; // only the first user is the admin
-        _users.Add(new User(_nextUserId, name, password, isAdmin));
-        Console.WriteLine("User registered successfully.");
-        SaveToFile();
-    }
-
-    private static void RemoveUser()
-    {
-        if (_loggedInUser is not { IsAdmin: true })
-        {
-            Console.WriteLine("Only admin users can perform this action.");
-            return;
-        }
-
-        ListUsers();
-        Console.Write("Enter the ID of the user you wish to remove: ");
-        if (!int.TryParse(Console.ReadLine(), out int id))
-        {
-            Console.WriteLine("Invalid input, please enter a numeric ID.");
-            return;
-        }
-        
-        bool removed = _users.RemoveAll(user => user.Id == id) > 0;
-        if (removed)
-        {
-            Console.WriteLine("The user was successfully removed.");
-            SaveToFile();
-        }
-        else
-        {
-            Console.WriteLine("Invalid ID. No matches found.");
-        }
-    }
-
-    private static void LogInUser()
+    private static void Login()
     {
         Console.Write("Name: ");
-        var name = Console.ReadLine();
+        var name = Console.ReadLine()!;
         Console.Write("Password: ");
-        var password = Console.ReadLine();
+        var pass = Console.ReadLine()!;
 
-        bool found = false;
-        foreach (User user in _users)
-        {
-            if (user.Name == name && user.Password == password)
-            {
-                _loggedInUser = user;
-                Console.WriteLine("Logged in as: " + user.Name);
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-        {
-            Console.WriteLine("Invalid credentials.");
-        }
-    }
-
-    private static void LogOutUser()
-    {
-        if (_loggedInUser != null)
-        {
-            Console.WriteLine("Logged out." + _loggedInUser.Name);
-            _loggedInUser = null;
-        }
+        if (!Users.Login(name, pass))
+            Console.WriteLine("Invalid credentials!");
         else
-        {
-            Console.WriteLine("No user is currently logged in.");
-        }
-    }
-    
-    private static void ListUsers()
-    {
-        if (_users.Count == 0)
-        {
-            Console.WriteLine("No users registered.");
-        }
-        else
-        {
-            foreach (User user in _users)
-            {
-                Console.WriteLine(user);
-            }
-        }
+            Console.WriteLine($"Logged in as {Users.LoggedInUser!.Name}");
     }
 
-    private static void SaveUsers()
-    {
-        try
-        {
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(UsersPath, JsonSerializer.Serialize(_users, options));
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine("Error saving users: " + e.Message);
-        }
-    }
-    
-    private static void Loadusers()
+    private static void LoadUsers()
     {
         if (!File.Exists(UsersPath)) return;
+        var json = File.ReadAllText(UsersPath);
+        var loaded = JsonSerializer.Deserialize<List<User>>(json);
+        if (loaded != null)
+            foreach (var u in loaded)
+                if (u.Name != null && u.Password != null) Users.RegisterUser(u.Name, u.Password);
+    }
 
-        try
+    private static void LoadTransactions()
+    {
+        if (!File.Exists(FilePath)) return;
+        var json = File.ReadAllText(FilePath);
+        var loaded = JsonSerializer.Deserialize<List<Transaction>>(json);
+        if (loaded != null)
+            foreach (var t in loaded) Transactions.AddTransaction(t);
+    }
+
+    private static void LoadLimits()
+    {
+        if (!File.Exists(LimitsPath))
         {
-            string json = File.ReadAllText(UsersPath);
-            var loadedUsers = JsonSerializer.Deserialize<List<User>>(json);
-            if (loadedUsers != null)
+            var defaults = new List<BudgetLimit>
             {
-                _users.AddRange(loadedUsers);
-                _nextUserId = _users.Any() ? _users.Max(u => u.Id) + 1 : 1;
-            }
+                new() { Category = "Groceries", Limit = 400 },
+                new() { Category = "Rent", Limit = 900 },
+                new() { Category = "Entertainment", Limit = 100 }
+            };
+            File.WriteAllText(LimitsPath, JsonSerializer.Serialize(defaults, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch (IOException e)
-        {
-            Console.WriteLine("Error loading users: " + e.Message);
-        }
+
+        var json = File.ReadAllText(LimitsPath);
+        var limits = JsonSerializer.Deserialize<List<BudgetLimit>>(json)!;
+        Budget.SetLimits(limits);
+    }
+
+    private static void SaveAll()
+    {
+        File.WriteAllText(FilePath, JsonSerializer.Serialize(Transactions.Transactions, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(UsersPath, JsonSerializer.Serialize(Users.Users, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(LimitsPath, JsonSerializer.Serialize(Budget.Limits, new JsonSerializerOptions { WriteIndented = true }));
     }
 }

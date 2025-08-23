@@ -1,4 +1,4 @@
-namespace BudgetTracker;
+namespace BudgetTracker.Models;
 
 public class BudgetLimit
 {
