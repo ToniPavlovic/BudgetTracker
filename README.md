@@ -1,33 +1,30 @@
-# 💰 Budget Tracker with User Management
+# 💰 Budget Tracker
 
-A C# console application for managing personal finances with multi-user support.
-Users can log income and expenses, categorize transactions, and track their balance.
-The app also includes a full user system with admin controls, login/logout, and account management.
-All data is stored locally in JSON files.
+A C# console application that helps users manage their personal finances. 
+It supports multiple users, allows tracking income and expenses, enforces category-based budget limits, and provides undo/redo functionality for transactions. 
+All data is stored locally in JSON files, making it simple and persistent.
 
 ---
 
-## ✨ Features
+## 📝 Features
 
 ### User Management
-- Create, edit, and delete users
-- Admin access for managing all accounts
-- Login and logout functionality
-- List all registered users
+- Multi-user system with login and logout.
+- Register new users with username and password.
+- Track transactions per user.
 
-### Financial Tracking
-- Add income or expense transactions
-- Categorize transactions (e.g., Food, Rent, Salary)
-- Track balance in real-time
-- Edit or delete transactions
+Transaction Management
+- Add income and expense transactions with description, category, and amount.
+- Edit or delete transactions.
+- Undo and redo recent transactions.
 
-### History & Reporting
-- Undo and redo transactions
-- View full transaction history
-- Show summary by category
-- Generate monthly reports
+### Budget Monitoring
+- Monthly budget limits per category (e.g., Groceries, Rent, Entertainment).
+- Automatic warnings when spending exceeds category limits.
 
-### Data & Limits
-- All data saved locally (`budget.json`)
-- User data saved locally (`users.json`)
-- Warnings when category limits are exceeded (`limits.json`)
+### Reportings
+- View current balance.
+- Display complete transaction history.
+
+### Reportings
+- All data is saved in JSON files: `users.json`, `budget.json`, and `limits.json`.
