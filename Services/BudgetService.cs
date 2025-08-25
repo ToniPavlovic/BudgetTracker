@@ -8,7 +8,7 @@ public class BudgetService
     
     public IReadOnlyList<BudgetLimit> Limits => _limits;
 
-    public void SetLimits(List<BudgetLimit> limits)
+    public void SetLimits(List<BudgetLimit>? limits)
     {
         _limits.Clear();
         if (limits != null) _limits.AddRange(limits);

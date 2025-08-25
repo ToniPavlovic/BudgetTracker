@@ -31,7 +31,8 @@ class Program
             Console.WriteLine("8. Undo Transaction");
             Console.WriteLine("9. Redo Transaction");
             Console.WriteLine("10. Show Transactions History");
-            Console.WriteLine("11. Exit");
+            Console.WriteLine("11. Admin Menu");
+            Console.WriteLine("12. Exit");
 
             Console.Write("Choose: ");
             var choice = Console.ReadLine();
@@ -51,7 +52,8 @@ class Program
                 case "8": UndoTransaction(); break;
                 case "9": RedoTransaction(); break;
                 case "10": ShowTransactionsHistory(); break;
-                case "11": SaveAll(); return;
+                case "11": AdminMenu(); break;
+                case "12": SaveAll(); return;
                 default: Console.WriteLine("Invalid choice!"); break;
             }
         }
@@ -66,7 +68,7 @@ class Program
         }
         return true;
     }
-
+    
     private static void AddTransaction(bool isIncome)
     {
         if (!RequireLogin()) return;
@@ -169,6 +171,67 @@ class Program
         else
             Console.WriteLine($"Logged in as {Users.LoggedInUser!.Name}");
     }
+    
+    private static void AdminMenu()
+    {
+        if (!RequireLogin()) return;
+        if (Users.LoggedInUser!.Role != "Admin")
+        {
+            Console.WriteLine("Access denied. Admins only!");
+            return;
+        }
+
+        while (true)
+        {
+            Console.WriteLine("\n--- Admin Menu ---");
+            Console.WriteLine("1. Register New User");
+            Console.WriteLine("2. List Users");
+            Console.WriteLine("3. Delete User");
+            Console.WriteLine("4. Back");
+
+            Console.Write("Choose: ");
+            var choice = Console.ReadLine();
+
+            switch (choice)
+            {
+                case "1": RegisterUserCli(); break;
+                case "2": ListUsers(); break;
+                case "3": DeleteUserCli(); break;
+                case "4": return;
+                default: Console.WriteLine("Invalid choice!"); break;
+            }
+        }
+    }
+
+    private static void RegisterUserCli()
+    {
+        Console.Write("Name: ");
+        var name = Console.ReadLine()!;
+        Console.Write("Password: ");
+        var pass = Console.ReadLine()!;
+        Console.Write("Role (Admin/User): ");
+        var role = Console.ReadLine() ?? "User";
+
+        Users.RegisterUser(name, pass, role);
+    }
+
+    private static void ListUsers()
+    {
+        foreach (var u in Users.Users)
+        {
+            Console.WriteLine(u);
+        }
+    }
+
+    private static void DeleteUserCli()
+    {
+        ListUsers();
+        Console.Write("Enter user ID to delete: ");
+        if (int.TryParse(Console.ReadLine(), out var id))
+        {
+            Users.DeleteUser(id);
+        }
+    }
 
     private static void LoadUsers()
     {
@@ -176,8 +239,7 @@ class Program
         var json = File.ReadAllText(UsersPath);
         var loaded = JsonSerializer.Deserialize<List<User>>(json);
         if (loaded != null)
-            foreach (var u in loaded)
-                if (u.Name != null && u.Password != null) Users.RegisterUser(u.Name, u.Password);
+            Users.LoadUsers(loaded);
     }
 
     private static void LoadTransactions()

@@ -1,4 +1,5 @@
 using BudgetTracker.Models;
+using BCrypt.Net;
 
 namespace BudgetTracker.Services;
 
@@ -10,7 +11,7 @@ public class UserService
 
     public IReadOnlyList<User> Users => _users;
 
-    public void RegisterUser(string name, string password)
+    public void RegisterUser(string name, string password, string role)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(password))
         {
@@ -18,15 +19,35 @@ public class UserService
             return;
         }
         
-        _users.Add(new User(_nextUserId++, name, password));
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
+        
+        _users.Add(new User(_nextUserId++, name, passwordHash, role));
         Console.WriteLine($"User '{name}' registered successfully!");
+    }
+
+    public void DeleteUser(int userId)
+    {
+        var user = _users.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+        {
+            Console.WriteLine("User not found.");
+            return;
+        }
+        
+        _users.Remove(user);
+        Console.WriteLine($"User '{user.Name}' deleted successfully!");
     }
 
     public bool Login(string name, string password)
     {
-        var user = _users.FirstOrDefault(u => u.Name == name && u.Password == password);
-        if (user != null) LoggedInUser = user;
-        return user != null;
+        var user = _users.FirstOrDefault(u => u.Name == name);
+        if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
+        {
+            LoggedInUser = user;
+            return true;
+        }
+
+        return false;
     }
 
     public void Logout()
@@ -39,6 +60,18 @@ public class UserService
         else
         {
             Console.WriteLine("No user is currently logged in.");
+        }
+    }
+
+    public void LoadUsers(List<User> users)
+    {
+        foreach (var u in users)
+        {
+            if (u.Id >= _nextUserId)
+            {
+                _nextUserId = u.Id + 1;
+            }
+            _users.Add(u);
         }
     }
 }

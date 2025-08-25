@@ -1,6 +1,14 @@
 [
   {
-    "Name": "Toni Pavlovic",
-    "Password": "12345"
+    "Id": 1,
+    "Name": "Toni",
+    "Password": "$2a$11$YJGSkKcE0v64rVI1DJJ7LuQYexhagoKtFCtp26jDobHThe1HfSZmm",
+    "Role": "Admin"
+  },
+  {
+    "Id": 2,
+    "Name": "TestUser",
+    "Password": "$2a$11$nSiQsYuTjlG02dwEq1agFOSECoJaxVuGZ9L86L3h2/gmMp0TDCIha",
+    "Role": "User"
   }
 ]

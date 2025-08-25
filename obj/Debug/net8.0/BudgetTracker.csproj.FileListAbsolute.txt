@@ -28,3 +28,6 @@ C:\Users\PC\RiderProjects\BudgetTracker\obj\Debug\net8.0\refint\BudgetTracker.dl
 C:\Users\PC\RiderProjects\BudgetTracker\obj\Debug\net8.0\BudgetTracker.pdb
 C:\Users\PC\RiderProjects\BudgetTracker\obj\Debug\net8.0\BudgetTracker.genruntimeconfig.cache
 C:\Users\PC\RiderProjects\BudgetTracker\obj\Debug\net8.0\ref\BudgetTracker.dll
+C:\Users\PC\RiderProjects\BudgetTracker\bin\Debug\net8.0\BCrypt.Net-Next.dll
+C:\Users\PC\RiderProjects\BudgetTracker\obj\Debug\net8.0\BudgetTracker.csproj.AssemblyReference.cache
+C:\Users\PC\RiderProjects\BudgetTracker\obj\Debug\net8.0\BudgetTr.578BD9FB.Up2Date
