@@ -1,15 +1,33 @@
 using BudgetTracker.Models;
 using BCrypt.Net;
+using BudgetTracker.Storage;
 
 namespace BudgetTracker.Services;
 
 public class UserService
 {
+    private readonly IStorageProvider<User> _storage;
+    private readonly string _file =  "users.json";
     private readonly List<User> _users = new();
     private int _nextUserId = 1;
     public User? LoggedInUser { get; private set; }
 
     public IReadOnlyList<User> Users => _users;
+
+    public UserService(IStorageProvider<User> storage)
+    {
+        _storage = storage;
+        Load();
+    }
+
+    public void Load()
+    {
+        _users.Clear();
+        _users.AddRange(_storage.Load(_file));
+        _nextUserId = _users.Count == 0 ? 1 : _users.Max(u => u.Id) + 1;
+    }
+    
+    public void  Save() => _storage.Save(_file, _users);
 
     public void RegisterUser(string name, string password, string role)
     {
@@ -22,6 +40,7 @@ public class UserService
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
         
         _users.Add(new User(_nextUserId++, name, passwordHash, role));
+        Save();
         Console.WriteLine($"User '{name}' registered successfully!");
     }
 
@@ -35,6 +54,7 @@ public class UserService
         }
         
         _users.Remove(user);
+        Save();
         Console.WriteLine($"User '{user.Name}' deleted successfully!");
     }
 

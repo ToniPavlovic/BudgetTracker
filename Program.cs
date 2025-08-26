@@ -1,23 +1,15 @@
-﻿using System.Text.Json;
-using BudgetTracker.Models;
+﻿using BudgetTracker.Models;
 using BudgetTracker.Services;
+using BudgetTracker.Storage;
 
 class Program
 {
-    private const string FilePath = "budget.json";
-    private const string UsersPath = "users.json";
-    private const string LimitsPath = "limits.json";
-
-    private static readonly TransactionService Transactions = new();
-    private static readonly UserService Users = new();
-    private static readonly BudgetService Budget = new();
+    private static readonly TransactionService Transactions = new(new JsonStorageProvider<Transaction>());
+    private static readonly UserService Users = new(new JsonStorageProvider<User>());
+    private static readonly BudgetService Budget = new(new JsonStorageProvider<BudgetLimit>());
 
     static void Main()
     {
-        LoadUsers();
-        LoadTransactions();
-        LoadLimits();
-
         while (true)
         {
             Console.WriteLine("\n--- Budget Tracker ---");
@@ -53,7 +45,7 @@ class Program
                 case "9": RedoTransaction(); break;
                 case "10": ShowTransactionsHistory(); break;
                 case "11": AdminMenu(); break;
-                case "12": SaveAll(); return;
+                case "12": return;
                 default: Console.WriteLine("Invalid choice!"); break;
             }
         }
@@ -102,14 +94,14 @@ class Program
         if (!RequireLogin()) return;
 
         ShowTransactionsHistory();
-        Console.Write("Enter index to edit: ");
+        Console.Write("Enter index of transaction to edit: ");
         if (!int.TryParse(Console.ReadLine(), out var idx)) return;
 
-        Console.Write("New Description: ");
+        Console.Write("New Description (leave blank to keep old): ");
         var desc = Console.ReadLine()!;
-        Console.Write("New Category: ");
+        Console.Write("New Category (leave blank to keep old): ");
         var cat = Console.ReadLine()!;
-        Console.Write("New Amount: ");
+        Console.Write("New Amount (leave blank to keep old): ");
         decimal.TryParse(Console.ReadLine(), out var amt);
 
         Transactions.EditTransaction(idx, new Transaction
@@ -231,48 +223,5 @@ class Program
         {
             Users.DeleteUser(id);
         }
-    }
-
-    private static void LoadUsers()
-    {
-        if (!File.Exists(UsersPath)) return;
-        var json = File.ReadAllText(UsersPath);
-        var loaded = JsonSerializer.Deserialize<List<User>>(json);
-        if (loaded != null)
-            Users.LoadUsers(loaded);
-    }
-
-    private static void LoadTransactions()
-    {
-        if (!File.Exists(FilePath)) return;
-        var json = File.ReadAllText(FilePath);
-        var loaded = JsonSerializer.Deserialize<List<Transaction>>(json);
-        if (loaded != null)
-            foreach (var t in loaded) Transactions.AddTransaction(t);
-    }
-
-    private static void LoadLimits()
-    {
-        if (!File.Exists(LimitsPath))
-        {
-            var defaults = new List<BudgetLimit>
-            {
-                new() { Category = "Groceries", Limit = 400 },
-                new() { Category = "Rent", Limit = 900 },
-                new() { Category = "Entertainment", Limit = 100 }
-            };
-            File.WriteAllText(LimitsPath, JsonSerializer.Serialize(defaults, new JsonSerializerOptions { WriteIndented = true }));
-        }
-
-        var json = File.ReadAllText(LimitsPath);
-        var limits = JsonSerializer.Deserialize<List<BudgetLimit>>(json)!;
-        Budget.SetLimits(limits);
-    }
-
-    private static void SaveAll()
-    {
-        File.WriteAllText(FilePath, JsonSerializer.Serialize(Transactions.Transactions, new JsonSerializerOptions { WriteIndented = true }));
-        File.WriteAllText(UsersPath, JsonSerializer.Serialize(Users.Users, new JsonSerializerOptions { WriteIndented = true }));
-        File.WriteAllText(LimitsPath, JsonSerializer.Serialize(Budget.Limits, new JsonSerializerOptions { WriteIndented = true }));
     }
 }

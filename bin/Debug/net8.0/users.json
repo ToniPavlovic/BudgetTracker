@@ -8,7 +8,13 @@
   {
     "Id": 2,
     "Name": "TestUser",
-    "Password": "$2a$11$nSiQsYuTjlG02dwEq1agFOSECoJaxVuGZ9L86L3h2/gmMp0TDCIha",
+    "Password": "$2a$11$hd7fKbSgQoAd3F5NXUPAcOmmZaGbAttTcF7XrQc.E/3N.VuXtaPPW",
     "Role": "User"
+  },
+  {
+    "Id": 3,
+    "Name": "TestAdmin",
+    "Password": "$2a$11$jfvb3YGW/7qpu0uSGHK10.XD7mEK/5e4UZX4H00VszmP13cQcsW2y",
+    "Role": "Admin"
   }
 ]

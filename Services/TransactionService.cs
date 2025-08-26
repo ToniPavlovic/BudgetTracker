@@ -1,21 +1,38 @@
 using BudgetTracker.Models;
+using BudgetTracker.Storage;
 
 namespace BudgetTracker.Services;
 
 public class TransactionService
 {
+    private readonly IStorageProvider<Transaction> _storage;
+    private readonly string _file =  "budget.json";
     private readonly List<Transaction> _transactions = new();
     private readonly Stack<List<Transaction>> _undoStack = new();
     private readonly Stack<List<Transaction>> _redoStack = new();
     
     public IReadOnlyList<Transaction> Transactions => _transactions;
 
+    public TransactionService(IStorageProvider<Transaction> storage)
+    {
+        _storage = storage;
+        Load();
+    }
+
+    public void Load()
+    {
+        _transactions.Clear();
+        _transactions.AddRange(_storage.Load(_file));
+    }
+    
+    public void  Save() => _storage.Save(_file, _transactions);
+    
     public void AddTransaction(Transaction transaction)
     {
         _undoStack.Push(CloneTransactions());
         _redoStack.Clear();
         _transactions.Add(transaction);
-        
+        Save();
     }
     
     public void EditTransaction(int index, Transaction updated)
@@ -24,7 +41,7 @@ public class TransactionService
         _undoStack.Push(CloneTransactions());
         _redoStack.Clear();
         _transactions[index] = updated;
-        
+        Save();
     }
 
     public void DeleteTransaction(int index)
@@ -33,7 +50,7 @@ public class TransactionService
         _undoStack.Push(CloneTransactions());
         _redoStack.Clear();
         _transactions.RemoveAt(index);
-        
+        Save();
     }
 
     public void UndoTransaction()
@@ -42,6 +59,7 @@ public class TransactionService
         _redoStack.Push(CloneTransactions());
         _transactions.Clear();
         _transactions.AddRange(_undoStack.Pop());
+        Save();
     }
     
     public void RedoTransaction()
@@ -50,6 +68,7 @@ public class TransactionService
         _undoStack.Push(CloneTransactions());
         _transactions.Clear();
         _transactions.AddRange(_redoStack.Pop());
+        Save();
     }
     
     private List<Transaction> CloneTransactions()
