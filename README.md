@@ -6,7 +6,7 @@ All data is stored locally in JSON files, making it simple and persistent.
 
 ---
 
-## 📝 Features
+## Features
 
 ### User Management
 - Multi-user system with login and logout.
